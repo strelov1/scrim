@@ -1,0 +1,4 @@
+# Build output and the repo-local cargo home (registry, git checkouts, the prebuilt librusty_v8.a)
+scrim/target/
+.cargo-home/
+.DS_Store

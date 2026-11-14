@@ -1,0 +1,92 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # only used by the release step, which runs on tags
+
+jobs:
+  macos-arm64:
+    name: macOS arm64
+    runs-on: macos-15 # GitHub's macOS 15 runners are Apple Silicon
+    env:
+      # The prebuilt librusty_v8.a uses chained fixups: an older deployment target fails to link.
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustc -vV
+
+      # Stylo, Blitz and the rest take the bulk of the build; the v8 crate downloads a ~147 MB
+      # prebuilt librusty_v8.a into the registry rather than compiling V8.
+      - name: Cache cargo and target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            scrim/target
+          key: macos-arm64-cargo-${{ hashFiles('scrim/Cargo.lock') }}
+          restore-keys: macos-arm64-cargo-
+
+      - name: Build
+        run: cargo build --release --manifest-path scrim/Cargo.toml
+
+      - name: Check the binary is arm64
+        run: |
+          file scrim/target/release/scrim
+          lipo -archs scrim/target/release/scrim | tee /tmp/archs
+          grep -qx 'arm64' /tmp/archs
+
+      # Reads text, runs page JavaScript and keeps hidden content out — the three things the
+      # whole engine exists to do, in one request against a local server.
+      - name: Smoke test
+        run: |
+          mkdir -p /tmp/smoke
+          cat > /tmp/smoke/index.html <<'HTML'
+          <!doctype html><title>smoke</title>
+          <p>hello scrim</p>
+          <p style="display:none">hidden by inline style</p>
+          <style>.gone{display:none}</style><p class="gone">hidden by stylesheet</p>
+          <script>document.body.insertAdjacentHTML('beforeend','<p>from javascript</p>')</script>
+          HTML
+          python3 -m http.server 8231 --directory /tmp/smoke &
+          for i in $(seq 1 50); do curl -sf -o /dev/null http://127.0.0.1:8231/ && break; sleep 0.2; done
+
+          out=$(./scrim/target/release/scrim fetch http://127.0.0.1:8231/)
+          echo "$out"
+          echo "$out" | grep -q 'hello scrim'     || { echo '::error::visible text not read'; exit 1; }
+          echo "$out" | grep -q 'from javascript' || { echo '::error::page JavaScript did not run'; exit 1; }
+          ! echo "$out" | grep -q 'hidden'        || { echo '::error::hidden text leaked into the output'; exit 1; }
+
+      - name: Package
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || v="$(git rev-parse --short HEAD)"
+          mkdir -p dist
+          tar -C scrim/target/release -czf "dist/scrim-${v}-macos-arm64.tar.gz" scrim
+          shasum -a 256 dist/*.tar.gz | tee dist/SHA256SUMS
+          ls -lh dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scrim-macos-arm64
+          path: dist/*
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes --verify-tag
