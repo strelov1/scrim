@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg">
+  <img src="docs/logo-light.svg" alt="" width="64" height="64" align="left">
+</picture>
+
 # scrim
 
 A minimal headless browser for AI agents. One binary, no layout, no paint.
