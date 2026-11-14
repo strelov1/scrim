@@ -46,6 +46,22 @@ scrim matches Chrome's column widths, infobox placement and line breaking. Obscu
 the same bytes overflows the infobox past the viewport and squeezes the article column to about
 a hundred pixels.
 
+## Install
+
+```sh
+brew install strelov1/scrim/scrim
+```
+
+Or take the binary straight from the release:
+
+```sh
+curl -L https://github.com/strelov1/scrim/releases/download/v0.1.0/scrim-0.1.0-macos-arm64.tar.gz | tar xz
+./scrim --version
+```
+
+macOS 14 or newer on Apple Silicon; the bundled V8 is built with chained fixups and will not link
+on anything older. Every other platform: build from source, below.
+
 ## Usage
 
 ```sh
