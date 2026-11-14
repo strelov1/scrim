@@ -7,9 +7,39 @@ scrim drops everything that exists only to produce them — layout, painting, im
 animations — and keeps everything that decides *what the page says*: the DOM, page JavaScript,
 the cascade rules that hide content, cookies, navigation and forms.
 
-On a 34-task agent suite it passes everything headless Chrome passes, reads visible text with
-100.0 % recall and 99.9 % precision against Chrome's `innerText`, starts in ~13 ms on an article
-with scripts, and peaks at 69 MB over the whole suite where Chrome peaks at 973 MB.
+On a 34-task agent suite it passes everything headless Chrome passes, and reads visible text with
+100.0 % recall and 99.9 % precision against Chrome's `innerText`.
+
+## Measured against Obscura and Chrome
+
+Same machine (Apple M5), same page — a 1.4 MB saved copy of the Wikipedia article on Rust, served
+from localhost. Cold process per run, runs interleaved so a load spike hits every browser equally.
+
+| | scrim | Obscura 0.2.7 | Chrome 157 headless |
+|---|---|---|---|
+| Peak memory reading the page | **20 MB** | 52 MB | 804 MB |
+| Binary | **50 MB, one file** | 69 MB + 66 MB worker | 1.4 GB app bundle |
+| Page load, p50 of 11 | **35.6 ms** | 262.9 ms | 641.8 ms |
+| Startup, trivial page, p50 of 11 | **8.5 ms** | 15.6 ms | ~1200 ms to launch |
+| Agent tasks passed, of 34 | **34** | not run | 34 |
+| Visible-text recall / precision | **100.0 / 99.9 %** | not run | reference |
+| Anti-detect | none | built in (stealth build) | none |
+
+40× less memory than Chrome, 18× faster to read the page, and the startup overhead is two orders
+of magnitude smaller. Anti-detect is the one row where Obscura wins outright: scrim has none.
+
+### The same page, painted by all three
+
+scrim normally does no layout at all; these are its optional screenshot path (`--screenshot`),
+which is the only place it runs one. Chrome is the reference.
+
+| Chrome 157 | scrim | Obscura 0.2.7 |
+|---|---|---|
+| ![Chrome](docs/wikipedia-chrome.png) | ![scrim](docs/wikipedia-scrim.png) | ![Obscura](docs/wikipedia-obscura.png) |
+
+scrim matches Chrome's column widths, infobox placement and line breaking. Obscura's render of
+the same bytes overflows the infobox past the viewport and squeezes the article column to about
+a hundred pixels.
 
 ## Usage
 
