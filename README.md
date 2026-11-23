@@ -55,12 +55,27 @@ brew install strelov1/scrim/scrim
 Or take the binary straight from the release:
 
 ```sh
-curl -L https://github.com/strelov1/scrim/releases/download/v0.1.0/scrim-0.1.0-macos-arm64.tar.gz | tar xz
+curl -L https://github.com/strelov1/scrim/releases/download/v0.1.1/scrim-0.1.1-macos-arm64.tar.gz | tar xz
 ./scrim --version
 ```
 
 macOS 14 or newer on Apple Silicon; the bundled V8 is built with chained fixups and will not link
-on anything older. Every other platform: build from source, below.
+on anything older.
+
+### Nix (x86_64 Linux)
+
+With the `nix-command` and `flakes` experimental features enabled:
+
+```sh
+nix run github:strelov1/scrim -- fetch https://example.com
+nix profile install github:strelov1/scrim#scrim
+```
+
+To build from a checkout, run `nix build .#scrim`, then `./result/bin/scrim --version`.
+Nix vendors the locked Cargo dependencies and fetches the prebuilt V8 archive by hash
+before building scrim in the sandbox.
+
+For other platforms, see the source build below.
 
 ## Usage
 
@@ -95,8 +110,9 @@ Needs a Rust toolchain. On macOS the prebuilt V8 archive requires a 14.0 deploym
 MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --release --manifest-path scrim/Cargo.toml
 ```
 
-`./cargo.sh build --release --manifest-path scrim/Cargo.toml` does the same with a repo-local
-`CARGO_HOME` and an empty environment, so the build depends on nothing outside the checkout.
+`./cargo.sh build --release --manifest-path scrim/Cargo.toml` uses a repo-local
+`CARGO_HOME` and a controlled environment. It falls back to your `PATH` if Cargo is missing
+from the default tool directories.
 The first build downloads a prebuilt `librusty_v8.a` (~147 MB); V8 itself is not compiled.
 
 ## How it works
