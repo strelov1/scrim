@@ -60,7 +60,22 @@ curl -L https://github.com/strelov1/scrim/releases/download/v0.1.0/scrim-0.1.0-m
 ```
 
 macOS 14 or newer on Apple Silicon; the bundled V8 is built with chained fixups and will not link
-on anything older. Every other platform: build from source, below.
+on anything older.
+
+### Nix (x86_64 Linux)
+
+With the `nix-command` and `flakes` experimental features enabled:
+
+```sh
+nix run github:strelov1/scrim -- fetch https://example.com
+nix profile install github:strelov1/scrim#scrim
+```
+
+To build from a checkout, run `nix build .#scrim`, then `./result/bin/scrim --version`.
+Nix vendors the locked Cargo dependencies and fetches the prebuilt V8 archive by hash
+before building scrim in the sandbox.
+
+For other platforms, see the source build below.
 
 ## Usage
 

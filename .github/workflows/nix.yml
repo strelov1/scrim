@@ -1,0 +1,23 @@
+name: Nix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  x86_64-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31.11.5
+      - name: Evaluate the flake
+        run: nix flake check --no-build --no-update-lock-file
+      - name: Build and test scrim
+        run: nix build -L --option sandbox true --no-update-lock-file .#scrim
+      - name: Run the packaged CLI
+        run: nix run --no-update-lock-file .#scrim -- --version
