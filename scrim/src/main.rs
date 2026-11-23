@@ -304,7 +304,7 @@ fn main() {
                 std::process::exit(code);
             }
             if let Some(js) = args.iter().position(|a| a == "--eval").and_then(|i| args.get(i + 1)) {
-                match s.call(0, "__scrim.agent.eval", &[js.clone()]) {
+                match s.call(0, "__scrim.agent.eval", &[js.clone(), "throw".into()]) {
                     Ok(result) => println!("{result}"),
                     Err(e) => {
                         eprintln!("error: {e}");

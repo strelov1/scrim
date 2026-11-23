@@ -18,6 +18,39 @@ def check_page(binary, url, engine):
         raise SystemExit(f"{engine}: unexpected page text\n{result.stdout}")
 
 
+def check_eval(binary, url, engine):
+    failure = subprocess.run(
+        [binary, "fetch", url, "--eval", 'throw new Error("eval smoke failure")'],
+        capture_output=True, text=True, timeout=30,
+    )
+    if failure.returncode != 1 or failure.stdout or "eval smoke failure" not in failure.stderr:
+        raise SystemExit(f"{engine}: unexpected eval failure result: {failure}")
+
+    success = subprocess.run(
+        [binary, "fetch", url, "--eval", '"ERR:valid result"'],
+        capture_output=True, text=True, timeout=30, check=True,
+    )
+    if not success.stdout.startswith("ERR:valid result\n") or "visible body text" not in success.stdout:
+        raise SystemExit(f"{engine}: unexpected eval success result: {success}")
+
+
+def check_session(binary, url, session):
+    command = [binary, "--session", str(session)]
+    subprocess.run([*command, "goto", url], capture_output=True, timeout=30, check=True)
+    result = subprocess.run(
+        [*command, "eval", 'document.body.append("session marker"); throw new Error("session error")'],
+        capture_output=True, text=True, timeout=30, check=True,
+    )
+    if result.stdout.strip() != "ERR:session error":
+        raise SystemExit(f"unexpected session eval result: {result}")
+
+    page = subprocess.run(
+        [*command, "text"], capture_output=True, text=True, timeout=30, check=True,
+    )
+    if "session marker" not in page.stdout:
+        raise SystemExit(f"session did not replay the DOM edit: {page}")
+
+
 def main(binary):
     with TemporaryDirectory() as directory:
         # Exceed scrim's 256 KiB threshold so the second page uses V8.
@@ -38,7 +71,10 @@ def main(binary):
             thread.start()
             try:
                 for engine in ("QuickJS", "V8"):
-                    check_page(binary, f"http://127.0.0.1:{server.server_port}/{engine}.html", engine)
+                    url = f"http://127.0.0.1:{server.server_port}/{engine}.html"
+                    check_page(binary, url, engine)
+                    check_eval(binary, url, engine)
+                    check_session(binary, url, Path(directory, f"{engine}-session"))
             finally:
                 server.shutdown()
                 thread.join()
