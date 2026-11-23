@@ -30,7 +30,7 @@ rustPlatform.buildRustPackage {
   sourceRoot = "source/scrim";
 
   # Cargo.lock has both a registry and a Git copy of debug_timer 0.1.3.
-  cargoHash = "sha256-VRJapqDiqmo6CVBydKFM1MHp6HM98dX0Vak95i6E+2w=";
+  cargoHash = "sha256-N26W9wQgfypGQhKbA88ARl/UJqSnnxq+Id+BJoWNwLY=";
   # The v8 build script reads this local archive inside the sandbox.
   env.RUSTY_V8_ARCHIVE = v8Archive;
 
