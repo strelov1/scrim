@@ -62,14 +62,30 @@ jobs:
           <style>.gone{display:none}</style><p class="gone">hidden by stylesheet</p>
           <script>document.body.insertAdjacentHTML('beforeend','<p>from javascript</p>')</script>
           HTML
+          bin=./scrim/target/release/scrim
+          url=http://127.0.0.1:8231/
           python3 -m http.server 8231 --directory /tmp/smoke &
-          for i in $(seq 1 50); do curl -sf -o /dev/null http://127.0.0.1:8231/ && break; sleep 0.2; done
+          for i in $(seq 1 50); do curl -sf -o /dev/null "$url" && break; sleep 0.2; done
 
-          out=$(./scrim/target/release/scrim fetch http://127.0.0.1:8231/)
+          out=$("$bin" fetch "$url")
           echo "$out"
           echo "$out" | grep -q 'hello scrim'     || { echo '::error::visible text not read'; exit 1; }
           echo "$out" | grep -q 'from javascript' || { echo '::error::page JavaScript did not run'; exit 1; }
           ! echo "$out" | grep -q 'hidden'        || { echo '::error::hidden text leaked into the output'; exit 1; }
+
+          status=0
+          "$bin" fetch "$url" --eval 'throw new Error("eval smoke failure")' \
+            >/tmp/smoke/eval.stdout 2>/tmp/smoke/eval.stderr || status=$?
+          if [ "$status" -ne 1 ]; then
+            echo "::error::expected eval to exit 1, got $status"
+            exit 1
+          fi
+          test ! -s /tmp/smoke/eval.stdout
+          grep -q 'eval smoke failure' /tmp/smoke/eval.stderr
+
+          "$bin" fetch "$url" --eval '"ERR:valid result"' >/tmp/smoke/eval.stdout
+          test "$(head -n 1 /tmp/smoke/eval.stdout)" = 'ERR:valid result'
+          grep -q 'hello scrim' /tmp/smoke/eval.stdout
 
       - name: Package
         run: |

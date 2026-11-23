@@ -302,11 +302,9 @@
     },
     go(d) { __host.historyGo(Number(d)); return ''; },
     eval(js) {
-      try {
-        const r = (0, eval)(js);
-        if (r && typeof r.then === 'function') { r.then((v) => { S.lastEval = v; }, (e) => { S.lastEval = 'Error: ' + e; }); return '[promise]'; }
-        return typeof r === 'string' ? r : r === undefined ? '' : JSON.stringify(r);
-      } catch (e) { return 'ERR:' + (e && e.message); }
+      const r = (0, eval)(js);
+      if (r && typeof r.then === 'function') { r.then((v) => { S.lastEval = v; }, (e) => { S.lastEval = 'Error: ' + e; }); return '[promise]'; }
+      return typeof r === 'string' ? r : r === undefined ? '' : JSON.stringify(r);
     },
     // The DOM as it is now, for a painter that runs no JS (render.rs): live form state written
     // as attributes, CSSOM rules (insertRule, adoptedStyleSheets) written into <style>, and no

@@ -304,7 +304,13 @@ fn main() {
                 std::process::exit(code);
             }
             if let Some(js) = args.iter().position(|a| a == "--eval").and_then(|i| args.get(i + 1)) {
-                println!("{}", s.call(0, "__scrim.agent.eval", &[js.clone()]).unwrap_or_else(|e| e));
+                match s.call(0, "__scrim.agent.eval", &[js.clone()]) {
+                    Ok(result) => println!("{result}"),
+                    Err(e) => {
+                        eprintln!("error: {e}");
+                        std::process::exit(1);
+                    }
+                }
             }
             let t = std::time::Instant::now();
             let d = dump(&mut s, what);
